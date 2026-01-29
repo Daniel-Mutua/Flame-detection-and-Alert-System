@@ -1,0 +1,97 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+#define FLAME_PIN A0       // Analog output of flame sensor
+#define LED_PIN 5         // GPIO5
+#define BUZZER_PIN 15      // GPIO15
+
+const char* ssid = "Your wifi name";
+const char* password = "Your Password";
+
+ESP8266WebServer server(80);
+
+int flameThreshold = 500;  // ESP8266 A0 range is 0-1023
+
+void handleRoot() {
+  int flameValue = analogRead(FLAME_PIN);
+
+  String html = "<!DOCTYPE html><html><head><title>ESP8266 Flame Sensor</title>";
+  html += "<meta name='viewport' content='width=device-width, initial-scale=1.0'>";
+  html += "<style>body{font-family:Arial;text-align:center;margin-top:30px;} ";
+  html += ".status{font-size:24px;margin:20px;} ";
+  html += ".btn{padding:10px 20px;font-size:18px;margin:10px;cursor:pointer;} ";
+  html += ".on{background-color:#ff4c4c;color:white;} ";
+  html += ".off{background-color:#4caf50;color:white;}</style></head><body>";
+  
+  html += "<h1>🔥 ESP8266 Flame Sensor Dashboard</h1>";
+
+  html += "<div class='status'>Flame Sensor Value: <b>" + String(flameValue) + "</b></div>";
+
+  html += "<div class='status'>Flame Status: ";
+  if(flameValue < flameThreshold) html += "<b style='color:red'>Detected!</b>";
+  else html += "<b style='color:green'>No Flame</b>";
+  html += "</div>";
+
+  html += "<div class='status'>LED: " + String(digitalRead(LED_PIN) ? "ON" : "OFF") + "</div>";
+  html += "<a href='/led/on'><button class='btn on'>Turn LED ON</button></a>";
+  html += "<a href='/led/off'><button class='btn off'>Turn LED OFF</button></a>";
+
+  html += "<div class='status'>Buzzer: " + String(digitalRead(BUZZER_PIN) ? "ON" : "OFF") + "</div>";
+  html += "<a href='/buzzer/on'><button class='btn on'>Turn Buzzer ON</button></a>";
+  html += "<a href='/buzzer/off'><button class='btn off'>Turn Buzzer OFF</button></a>";
+
+  html += "</body></html>";
+
+  server.send(200, "text/html", html);
+}
+
+void handleLEDOn() { digitalWrite(LED_PIN, HIGH); server.sendHeader("Location", "/"); server.send(303); }
+void handleLEDOff() { digitalWrite(LED_PIN, LOW); server.sendHeader("Location", "/"); server.send(303); }
+void handleBuzzerOn() { digitalWrite(BUZZER_PIN, HIGH); server.sendHeader("Location", "/"); server.send(303); }
+void handleBuzzerOff() { digitalWrite(BUZZER_PIN, LOW); server.sendHeader("Location", "/"); server.send(303); }
+
+void setup() {
+  pinMode(FLAME_PIN, INPUT);
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+
+  digitalWrite(LED_PIN, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
+
+  Serial.begin(115200);
+  delay(1000);
+
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to Wi-Fi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.print("Connected! IP address: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", handleRoot);
+  server.on("/led/on", handleLEDOn);
+  server.on("/led/off", handleLEDOff);
+  server.on("/buzzer/on", handleBuzzerOn);
+  server.on("/buzzer/off", handleBuzzerOff);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop() {
+  int flameValue = analogRead(FLAME_PIN);
+
+  // Automatic flame detection
+  if (flameValue < flameThreshold) {
+    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(BUZZER_PIN, HIGH);
+  } else {
+    digitalWrite(LED_PIN, LOW);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+
+  server.handleClient();
+}
