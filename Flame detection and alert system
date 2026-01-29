@@ -23,7 +23,7 @@ void handleRoot() {
   html += ".on{background-color:#ff4c4c;color:white;} ";
   html += ".off{background-color:#4caf50;color:white;}</style></head><body>";
   
-  html += "<h1>🔥 ESP8266 Flame Sensor Dashboard</h1>";
+  html += "<h1>ESP8266 Flame Sensor Dashboard</h1>";
 
   html += "<div class='status'>Flame Sensor Value: <b>" + String(flameValue) + "</b></div>";
 
